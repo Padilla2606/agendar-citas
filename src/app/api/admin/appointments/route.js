@@ -16,11 +16,9 @@ export async function GET() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const db = getDb();
-  const appointments = db.prepare(
-    'SELECT * FROM appointments ORDER BY date DESC, time DESC'
-  ).all();
-  return NextResponse.json(appointments);
+  const db = await getDb();
+  const { rows } = await db.query('SELECT * FROM appointments ORDER BY date DESC, time DESC');
+  return NextResponse.json(rows);
 }
 
 export async function PATCH(request) {
@@ -40,8 +38,8 @@ export async function PATCH(request) {
       );
     }
 
-    const db = getDb();
-    db.prepare('UPDATE appointments SET status = ? WHERE id = ?').run(status, id);
+    const db = await getDb();
+    await db.query('UPDATE appointments SET status = $1 WHERE id = $2', [status, id]);
 
     return NextResponse.json({ message: 'Cita actualizada' });
   } catch (error) {
@@ -69,8 +67,8 @@ export async function DELETE(request) {
       );
     }
 
-    const db = getDb();
-    db.prepare('DELETE FROM appointments WHERE id = ?').run(id);
+    const db = await getDb();
+    await db.query('DELETE FROM appointments WHERE id = $1', [id]);
 
     return NextResponse.json({ message: 'Cita eliminada' });
   } catch (error) {

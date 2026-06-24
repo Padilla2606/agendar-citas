@@ -10,18 +10,18 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Fecha es obligatoria' }, { status: 400 });
   }
 
-  const db = getDb();
+  const db = await getDb();
 
-  const configRows = db.prepare('SELECT * FROM schedule_config').all();
+  const { rows: configRows } = await db.query('SELECT * FROM schedule_config');
   const config = {};
   configRows.forEach((row) => { config[row.key] = row.value; });
 
   let duration = parseInt(config.appointment_duration || '30', 10);
 
   if (serviceId) {
-    const service = db.prepare('SELECT duration FROM services WHERE id = ? AND active = 1').get(serviceId);
-    if (service) {
-      duration = service.duration;
+    const { rows } = await db.query('SELECT duration FROM services WHERE id = $1 AND active = TRUE', [Number(serviceId)]);
+    if (rows.length > 0) {
+      duration = rows[0].duration;
     }
   }
 
@@ -36,9 +36,11 @@ export async function GET(request) {
     return NextResponse.json({ slots: [], message: 'Día no laboral' });
   }
 
-  const existingAppointments = db.prepare(
-    "SELECT time FROM appointments WHERE date = ? AND status != 'cancelled'"
-  ).all(date).map((r) => r.time);
+  const { rows: existingRows } = await db.query(
+    "SELECT time FROM appointments WHERE date = $1 AND status != 'cancelled'",
+    [date]
+  );
+  const existingAppointments = existingRows.map((r) => r.time);
 
   const slots = [];
   const [startH, startM] = workStart.split(':').map(Number);

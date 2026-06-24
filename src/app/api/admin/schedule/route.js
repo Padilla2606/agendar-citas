@@ -16,8 +16,8 @@ export async function GET() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const db = getDb();
-  const rows = db.prepare('SELECT * FROM schedule_config').all();
+  const db = await getDb();
+  const { rows } = await db.query('SELECT * FROM schedule_config');
   const config = {};
   rows.forEach((row) => { config[row.key] = row.value; });
   return NextResponse.json(config);
@@ -31,18 +31,19 @@ export async function PUT(request) {
 
   try {
     const body = await request.json();
-    const db = getDb();
-    const upsert = db.prepare(
-      'INSERT INTO schedule_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
-    );
+    const db = await getDb();
 
-    const tx = db.transaction(() => {
-      if (body.work_days !== undefined) upsert.run('work_days', body.work_days);
-      if (body.work_start !== undefined) upsert.run('work_start', body.work_start);
-      if (body.work_end !== undefined) upsert.run('work_end', body.work_end);
-      if (body.appointment_duration !== undefined) upsert.run('appointment_duration', String(body.appointment_duration));
-    });
-    tx();
+    const upsert = async (key, value) => {
+      await db.query(
+        'INSERT INTO schedule_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
+        [key, value]
+      );
+    };
+
+    if (body.work_days !== undefined) await upsert('work_days', body.work_days);
+    if (body.work_start !== undefined) await upsert('work_start', body.work_start);
+    if (body.work_end !== undefined) await upsert('work_end', body.work_end);
+    if (body.appointment_duration !== undefined) await upsert('appointment_duration', String(body.appointment_duration));
 
     return NextResponse.json({ message: 'Configuración guardada' });
   } catch (error) {

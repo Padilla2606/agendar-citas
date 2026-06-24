@@ -16,9 +16,9 @@ export async function GET() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const db = getDb();
-  const services = db.prepare('SELECT * FROM services ORDER BY id ASC').all();
-  return NextResponse.json(services);
+  const db = await getDb();
+  const { rows } = await db.query('SELECT * FROM services ORDER BY id ASC');
+  return NextResponse.json(rows);
 }
 
 export async function POST(request) {
@@ -38,13 +38,14 @@ export async function POST(request) {
       );
     }
 
-    const db = getDb();
-    const result = db.prepare(
-      'INSERT INTO services (name, duration) VALUES (?, ?)'
-    ).run(name, Number(duration));
+    const db = await getDb();
+    const { rows } = await db.query(
+      'INSERT INTO services (name, duration) VALUES ($1, $2) RETURNING id',
+      [name, Number(duration)]
+    );
 
     return NextResponse.json(
-      { message: 'Servicio creado', id: result.lastInsertRowid },
+      { message: 'Servicio creado', id: rows[0].id },
       { status: 201 }
     );
   } catch (error) {
@@ -69,14 +70,12 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'ID es obligatorio' }, { status: 400 });
     }
 
-    const db = getDb();
+    const db = await getDb();
     if (name !== undefined && duration !== undefined) {
-      db.prepare('UPDATE services SET name = ?, duration = ? WHERE id = ?')
-        .run(name, Number(duration), id);
+      await db.query('UPDATE services SET name = $1, duration = $2 WHERE id = $3', [name, Number(duration), id]);
     }
     if (active !== undefined) {
-      db.prepare('UPDATE services SET active = ? WHERE id = ?')
-        .run(active ? 1 : 0, id);
+      await db.query('UPDATE services SET active = $1 WHERE id = $2', [active, id]);
     }
 
     return NextResponse.json({ message: 'Servicio actualizado' });
@@ -102,8 +101,8 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'ID es obligatorio' }, { status: 400 });
     }
 
-    const db = getDb();
-    db.prepare('DELETE FROM services WHERE id = ?').run(id);
+    const db = await getDb();
+    await db.query('DELETE FROM services WHERE id = $1', [id]);
 
     return NextResponse.json({ message: 'Servicio eliminado' });
   } catch (error) {
