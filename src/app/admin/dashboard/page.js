@@ -62,16 +62,20 @@ export default function DashboardPage() {
     if (!newService.name.trim()) { setServiceMsg('Nombre obligatorio'); return; }
     try {
       const r = await fetch('/api/admin/services', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(newService) });
+      const data = await r.json();
       if (r.ok) { setNewService({ name: '', duration: '30' }); setServiceMsg('Creado'); fetchServices(); setTimeout(() => setServiceMsg(''), 2000); }
-    } catch { setServiceMsg('Error'); }
+      else { setServiceMsg(data.error || 'Error'); }
+    } catch { setServiceMsg('Error de conexion'); }
   };
 
   const updateService = async (svc) => {
     setServiceMsg('');
     try {
       const r = await fetch('/api/admin/services', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ id: svc.id, name: svc.name, duration: svc.duration }) });
+      const data = await r.json();
       if (r.ok) { setEditingService(null); setServiceMsg('Actualizado'); fetchServices(); setTimeout(() => setServiceMsg(''), 2000); }
-    } catch { setServiceMsg('Error'); }
+      else { setServiceMsg(data.error || 'Error'); }
+    } catch { setServiceMsg('Error de conexion'); }
   };
 
   const toggleServiceActive = async (svc) => {
