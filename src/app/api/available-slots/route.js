@@ -12,16 +12,18 @@ export async function GET(request) {
 
   const db = await getDb();
 
-  const { rows: configRows } = await db.query('SELECT * FROM schedule_config');
+  const configRows = await db.scheduleConfig.findMany();
   const config = {};
   configRows.forEach((row) => { config[row.key] = row.value; });
 
   let duration = parseInt(config.appointment_duration || '30', 10);
 
   if (serviceId) {
-    const { rows } = await db.query('SELECT duration FROM services WHERE id = $1 AND active = TRUE', [Number(serviceId)]);
-    if (rows.length > 0) {
-      duration = rows[0].duration;
+    const service = await db.service.findFirst({
+      where: { id: Number(serviceId), active: true },
+    });
+    if (service) {
+      duration = service.duration;
     }
   }
 
@@ -36,11 +38,11 @@ export async function GET(request) {
     return NextResponse.json({ slots: [], message: 'Día no laboral' });
   }
 
-  const { rows: existingRows } = await db.query(
-    "SELECT time FROM appointments WHERE date = $1 AND status != 'cancelled'",
-    [date]
-  );
-  const existingAppointments = existingRows.map((r) => r.time);
+  const existingAppointments = await db.appointment.findMany({
+    where: { date, status: { not: 'cancelled' } },
+    select: { time: true },
+  });
+  const existingTimes = existingAppointments.map((r) => r.time);
 
   const slots = [];
   const [startH, startM] = workStart.split(':').map(Number);
@@ -53,7 +55,7 @@ export async function GET(request) {
     const m = String(currentMinutes % 60).padStart(2, '0');
     const timeStr = `${h}:${m}`;
 
-    if (!existingAppointments.includes(timeStr)) {
+    if (!existingTimes.includes(timeStr)) {
       slots.push(timeStr);
     }
 

@@ -17,7 +17,7 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const { rows } = await db.query('SELECT * FROM schedule_config');
+  const rows = await db.scheduleConfig.findMany();
   const config = {};
   rows.forEach((row) => { config[row.key] = row.value; });
   return NextResponse.json(config);
@@ -34,10 +34,11 @@ export async function PUT(request) {
     const db = await getDb();
 
     const upsert = async (key, value) => {
-      await db.query(
-        'INSERT INTO schedule_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-        [key, value]
-      );
+      await db.scheduleConfig.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      });
     };
 
     if (body.work_days !== undefined) await upsert('work_days', body.work_days);

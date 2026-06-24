@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Service {
+  id        Int          @id @default(autoincrement())
+  name      String
+  duration  Int          @default(30)
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now()) @map("created_at")
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+model Appointment {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  date      String
+  time      String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+  service   Service? @relation(fields: [serviceId], references: [id])
+  serviceId Int?     @map("service_id")
+
+  @@map("appointments")
+}
+
+model ScheduleConfig {
+  key   String @id
+  value String
+
+  @@map("schedule_config")
+}

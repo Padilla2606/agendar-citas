@@ -17,8 +17,10 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const { rows } = await db.query('SELECT * FROM appointments ORDER BY date DESC, time DESC');
-  return NextResponse.json(rows);
+  const appointments = await db.appointment.findMany({
+    orderBy: [{ date: 'desc' }, { time: 'desc' }],
+  });
+  return NextResponse.json(appointments);
 }
 
 export async function PATCH(request) {
@@ -39,7 +41,10 @@ export async function PATCH(request) {
     }
 
     const db = await getDb();
-    await db.query('UPDATE appointments SET status = $1 WHERE id = $2', [status, id]);
+    await db.appointment.update({
+      where: { id: Number(id) },
+      data: { status },
+    });
 
     return NextResponse.json({ message: 'Cita actualizada' });
   } catch (error) {
@@ -68,7 +73,7 @@ export async function DELETE(request) {
     }
 
     const db = await getDb();
-    await db.query('DELETE FROM appointments WHERE id = $1', [id]);
+    await db.appointment.delete({ where: { id: Number(id) } });
 
     return NextResponse.json({ message: 'Cita eliminada' });
   } catch (error) {

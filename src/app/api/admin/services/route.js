@@ -17,8 +17,8 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const { rows } = await db.query('SELECT * FROM services ORDER BY id ASC');
-  return NextResponse.json(rows);
+  const services = await db.service.findMany({ orderBy: { id: 'asc' } });
+  return NextResponse.json(services);
 }
 
 export async function POST(request) {
@@ -39,13 +39,12 @@ export async function POST(request) {
     }
 
     const db = await getDb();
-    const { rows } = await db.query(
-      'INSERT INTO services (name, duration) VALUES ($1, $2) RETURNING id',
-      [name, Number(duration)]
-    );
+    const service = await db.service.create({
+      data: { name, duration: Number(duration) },
+    });
 
     return NextResponse.json(
-      { message: 'Servicio creado', id: rows[0].id },
+      { message: 'Servicio creado', id: service.id },
       { status: 201 }
     );
   } catch (error) {
@@ -71,12 +70,16 @@ export async function PUT(request) {
     }
 
     const db = await getDb();
+    const data = {};
     if (name !== undefined && duration !== undefined) {
-      await db.query('UPDATE services SET name = $1, duration = $2 WHERE id = $3', [name, Number(duration), id]);
+      data.name = name;
+      data.duration = Number(duration);
     }
     if (active !== undefined) {
-      await db.query('UPDATE services SET active = $1 WHERE id = $2', [active, id]);
+      data.active = Boolean(active);
     }
+
+    await db.service.update({ where: { id: Number(id) }, data });
 
     return NextResponse.json({ message: 'Servicio actualizado' });
   } catch (error) {
@@ -102,7 +105,7 @@ export async function DELETE(request) {
     }
 
     const db = await getDb();
-    await db.query('DELETE FROM services WHERE id = $1', [id]);
+    await db.service.delete({ where: { id: Number(id) } });
 
     return NextResponse.json({ message: 'Servicio eliminado' });
   } catch (error) {

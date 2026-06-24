@@ -3,8 +3,10 @@ import getDb from '@/lib/db';
 
 export async function GET() {
   const db = await getDb();
-  const { rows } = await db.query('SELECT * FROM appointments ORDER BY date DESC, time DESC');
-  return NextResponse.json(rows);
+  const appointments = await db.appointment.findMany({
+    orderBy: [{ date: 'desc' }, { time: 'desc' }],
+  });
+  return NextResponse.json(appointments);
 }
 
 export async function POST(request) {
@@ -20,13 +22,18 @@ export async function POST(request) {
     }
 
     const db = await getDb();
-    const { rows } = await db.query(
-      'INSERT INTO appointments (name, phone, date, time, service_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-      [name, phone, date, time, service_id ? Number(service_id) : null]
-    );
+    const appointment = await db.appointment.create({
+      data: {
+        name,
+        phone,
+        date,
+        time,
+        serviceId: service_id ? Number(service_id) : null,
+      },
+    });
 
     return NextResponse.json(
-      { message: 'Cita agendada exitosamente', id: rows[0].id },
+      { message: 'Cita agendada exitosamente', id: appointment.id },
       { status: 201 }
     );
   } catch (error) {
