@@ -34,7 +34,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Error creating appointment:', error.message);
     return NextResponse.json(
-      { error: 'Error al agendar la cita: ' + error.message },
+      { error: 'Error al agendar la cita' },
       { status: 500 }
     );
   }
